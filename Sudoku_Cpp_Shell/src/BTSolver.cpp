@@ -103,7 +103,14 @@ pair<unordered_map<Variable*,Domain>,bool> BTSolver::forwardChecking ( void )
 
 		for ( Variable* neighbor : neighbors )
 		{
-			if ( ! neighbor->isChangeable() || neighbor->isAssigned() )
+			// Assigned neighbors with the same value violate consistency immediately.
+			if ( neighbor->isAssigned() )
+			{
+				if ( neighbor->getAssignment() == assignedVal )
+					return make_pair( modifiedMap, false );
+				continue;
+			}
+			if ( ! neighbor->isChangeable() )
 				continue;
 			if ( ! neighbor->getDomain().contains( assignedVal ) )
 				continue;
