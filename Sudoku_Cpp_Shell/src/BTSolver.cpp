@@ -176,7 +176,23 @@ Variable* BTSolver::getfirstUnassignedVariable ( void )
  */
 Variable* BTSolver::getMRV ( void )
 {
-    return nullptr;
+    Variable* mrv = nullptr;
+    int minDomainSize = -1;
+
+    for ( Variable* v : network.getVariables() )
+    {
+        if ( v->isAssigned() )
+            continue;
+
+        int domainSize = v->getDomain().size();
+        if ( mrv == nullptr || domainSize < minDomainSize )
+        {
+            minDomainSize = domainSize;
+            mrv = v;
+        }
+    }
+
+    return mrv;
 }
 
 /**
@@ -227,7 +243,33 @@ vector<int> BTSolver::getValuesInOrder ( Variable* v )
  */
 vector<int> BTSolver::getValuesLCVOrder ( Variable* v )
 {
-    return vector<int>();
+    vector<int> values = v->getDomain().getValues();
+    ConstraintNetwork::VariableSet neighbors = network.getNeighborsOfVariable( v );
+
+    // For each value, count how many neighbor domain values it would eliminate
+    vector<pair<int,int>> valueConstraintCount; // (count, value)
+
+    for ( int val : values )
+    {
+        int count = 0;
+        for ( Variable* neighbor : neighbors )
+        {
+            if ( neighbor->isAssigned() )
+                continue;
+            if ( neighbor->getDomain().contains( val ) )
+                count++;
+        }
+        valueConstraintCount.push_back( make_pair( count, val ) );
+    }
+
+    // Sort ascending by count (least constraining first)
+    sort( valueConstraintCount.begin(), valueConstraintCount.end() );
+
+    vector<int> sortedValues;
+    for ( auto& p : valueConstraintCount )
+        sortedValues.push_back( p.second );
+
+    return sortedValues;
 }
 
 /**
